@@ -4,6 +4,8 @@ Toda IA esquece tudo quando você fecha o chat. Com este template, o Claude Code
 
 E a memória dele fica num vault do Obsidian: você abre, lê, corrige e vê tudo conectado no Graph View.
 
+👉 **Site com o prompt pronto pra copiar:** https://nanofile01.github.io/claude-memoria-obsidian/
+
 ## Como funciona
 
 ```
