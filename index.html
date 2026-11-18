@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cérebro: memória permanente pro Claude Code</title>
+<meta name="description" content="Faça o Claude Code lembrar de tudo sobre você, com a memória dentro do Obsidian. Um prompt, copiar e colar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b12;
+    --card: #14141f;
+    --line: #262636;
+    --text: #ececf3;
+    --muted: #9a9ab0;
+    --purple: #8b5cf6;
+    --green: #39ff88;
+    --pink: #ff4fd8;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 Inter, system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(600px 400px at 85% -5%, rgba(139,92,246,.35), transparent 70%),
+      radial-gradient(500px 400px at 0% 30%, rgba(57,255,136,.12), transparent 70%),
+      radial-gradient(500px 400px at 100% 80%, rgba(255,79,216,.12), transparent 70%);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--green); }
+  code { font-family: "JetBrains Mono", monospace; font-size: .9em; background: #1d1d2b; padding: 2px 6px; border-radius: 6px; }
+
+  /* Hero */
+  header { padding: 72px 0 48px; text-align: center; }
+  .tag {
+    display: inline-block; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(20,20,31,.7);
+    color: var(--muted); font-size: 14px; margin-bottom: 20px;
+  }
+  .tag b { color: var(--green); }
+  h1 { font-size: clamp(36px, 7vw, 68px); line-height: 1.05; font-weight: 900; margin: 0 0 18px; letter-spacing: -1.5px; }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--green), var(--purple) 55%, var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sub { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 640px; margin: 0 auto 32px; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 24px; border-radius: 12px; font-weight: 700; text-decoration: none;
+    border: 1px solid var(--line); color: var(--text); background: var(--card);
+    transition: transform .15s, box-shadow .15s; cursor: pointer; font-size: 16px; font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.main { background: var(--green); color: #06110b; border-color: var(--green); box-shadow: 0 0 32px rgba(57,255,136,.35); }
+  .btn.main:hover { box-shadow: 0 0 48px rgba(57,255,136,.55); }
+
+  /* Demo chat */
+  .demo {
+    margin: 48px auto 0; max-width: 680px; text-align: left;
+    background: #0f0f18; border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(139,92,246,.18); overflow: hidden;
+  }
+  .demo-bar { display: flex; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .demo-bar i { width: 11px; height: 11px; border-radius: 50%; background: #333; }
+  .demo-body { padding: 18px; font-family: "JetBrains Mono", monospace; font-size: 14px; }
+  .me { color: var(--green); }
+  .ai { color: var(--text); margin-top: 10px; }
+  .ai span { color: var(--purple); }
+  .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+
+  section { padding: 56px 0; }
+  h2 { font-size: clamp(26px, 4vw, 36px); margin: 0 0 8px; font-weight: 900; letter-spacing: -.5px; }
+  .lead { color: var(--muted); margin: 0 0 28px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px; transition: border-color .2s, transform .2s;
+  }
+  .card:hover { border-color: var(--purple); transform: translateY(-3px); }
+  .card .n {
+    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    background: rgba(139,92,246,.18); color: var(--purple); font-weight: 900; margin-bottom: 12px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .req .card .n { background: rgba(57,255,136,.14); color: var(--green); }
+
+  /* Prompt box */
+  .prompt {
+    background: #0f0f18; border: 1px solid var(--purple); border-radius: var(--radius);
+    box-shadow: 0 0 50px rgba(139,92,246,.2); overflow: hidden;
+  }
+  .prompt-top {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .prompt-top b { font-size: 15px; }
+  .prompt pre {
+    margin: 0; padding: 18px; max-height: 380px; overflow: auto;
+    font: 13px/1.6 "JetBrains Mono", monospace; color: #cfcfe0; white-space: pre-wrap; word-break: break-word;
+  }
+  .copy.done { background: var(--purple); border-color: var(--purple); color: #fff; box-shadow: none; }
+
+  ol.steps { padding-left: 20px; margin: 24px 0 0; }
+  ol.steps li { margin-bottom: 8px; }
+
+  .warn { border-left: 3px solid var(--pink); background: rgba(255,79,216,.06); padding: 18px 20px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .warn ul { margin: 8px 0 0; padding-left: 20px; }
+
+  footer { padding: 40px 0 56px; text-align: center; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 560px) {
+    header { padding-top: 48px; }
+    .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="tag">🧠 Grátis · <b>open source</b> · 5 minutos</div>
+  <h1>O Claude Code que <span class="grad">lembra de tudo</span></h1>
+  <p class="sub">Toda IA esquece você quando o chat fecha. Com o Cérebro, o Claude Code sabe quem você é, em que você trabalha e o que vocês combinaram, em qualquer chat novo. E a memória fica no seu Obsidian.</p>
+  <div class="btns">
+    <a class="btn main" href="#prompt">⚡ Pegar o prompt</a>
+    <a class="btn" href="https://github.com/NanoFile01/claude-memoria-obsidian" target="_blank" rel="noopener">Ver no GitHub</a>
+  </div>
+
+  <div class="demo" aria-label="Exemplo de conversa">
+    <div class="demo-bar"><i></i><i></i><i></i></div>
+    <div class="demo-body">
+      <div class="me">&gt; em que pé tá meu projeto e o que eu combinei de fazer essa semana?</div>
+      <div class="ai"><span>●</span> Seu app de agendamento está na fase de testes. Ficou combinado terminar a tela de login até sexta e gravar o vídeo no sábado. Quer começar pelo login?</div>
+      <div class="note">↑ chat novo. Nada foi colado antes.</div>
+    </div>
+  </div>
+</header>
+
+<section class="wrap" id="como">
+  <h2>Como funciona</h2>
+  <p class="lead">Sem plugin, sem servidor. Só arquivos de texto no seu computador.</p>
+  <div class="grid">
+    <div class="card"><div class="n">1</div><h3>Uma pasta pra tudo</h3><p>Você ganha uma pasta <code>Cerebro</code> com tudo de importante separado por categoria: projetos, código, estudos.</p></div>
+    <div class="card"><div class="n">2</div><h3>Regras fixas</h3><p>O <code>CLAUDE.md</code> é lido em todo chat: seu idioma, seu nível e a regra de ser honesto e discordar quando você errar.</p></div>
+    <div class="card"><div class="n">3</div><h3>Índice curto</h3><p>Uma linha por assunto. O Claude lê o índice sempre e só abre a nota completa quando o assunto aparece.</p></div>
+    <div class="card"><div class="n">4</div><h3>Memória no Obsidian</h3><p>Ele mesmo escreve as notas. Você abre, corrige e vê tudo ligado no Graph View.</p></div>
+  </div>
+</section>
+
+<section class="wrap req" id="precisa">
+  <h2>O que você precisa ter</h2>
+  <p class="lead">Instale antes de colar o prompt.</p>
+  <div class="grid">
+    <div class="card"><div class="n">✓</div><h3>Claude Code</h3><p>Precisa de uma conta Claude com acesso ao Claude Code. <a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a></p></div>
+    <div class="card"><div class="n">✓</div><h3>Obsidian</h3><p>Grátis, pra Windows, Mac e Linux. <a href="https://obsidian.md" target="_blank" rel="noopener">obsidian.md</a></p></div>
+    <div class="card"><div class="n">+</div><h3>Git (opcional)</h3><p>Se tiver, o Claude baixa o template sozinho. Se não tiver, ele te pede pra baixar o ZIP.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="prompt">
+  <h2>O prompt</h2>
+  <p class="lead">Copie tudo, abra um chat novo no Claude Code e cole. Ele te faz umas perguntas e monta o resto.</p>
+
+  <div class="prompt">
+    <div class="prompt-top">
+      <b>📋 Prompt de instalação</b>
+      <button class="btn main copy" id="copy" type="button">Copiar prompt</button>
+    </div>
+    <pre id="prompt-text">Carregando o prompt...</pre>
+  </div>
+
+  <ol class="steps">
+    <li>Clique em <b>Copiar prompt</b>.</li>
+    <li>Abra o Claude Code numa pasta qualquer e cole num chat novo.</li>
+    <li>Responda as perguntas dele (nome, idioma, o que você faz, onde criar a pasta).</li>
+    <li>No final, abra o Obsidian, clique em <b>"Abrir pasta como cofre"</b> e escolha <code>Cerebro/03_Obsidian</code>.</li>
+    <li>Abra um chat novo e pergunte: <i>"o que você sabe sobre mim?"</i></li>
+  </ol>
+</section>
+
+<section class="wrap">
+  <div class="warn">
+    <b>⚠️ Cuidados</b>
+    <ul>
+      <li>Nunca deixe o Claude salvar senha, token ou chave de API na memória. São arquivos de texto comuns.</li>
+      <li>Se você sincroniza o vault (Drive, OneDrive, Obsidian Sync), a memória vai junto pra nuvem.</li>
+      <li>Ele pode anotar coisa errada. Abra a pasta <code>Claude/</code> de vez em quando e corrija.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="wrap">
+  Código aberto no <a href="https://github.com/NanoFile01/claude-memoria-obsidian" target="_blank" rel="noopener">GitHub</a>. Licença MIT.
+</footer>
+
+<script>
+  // O prompt vem do PROMPT-INSTALACAO.md do repo, assim existe uma fonte só.
+  const pre = document.getElementById('prompt-text');
+  const repoFile = 'https://github.com/NanoFile01/claude-memoria-obsidian/blob/main/PROMPT-INSTALACAO.md';
+  let prompt = '';
+
+  fetch('PROMPT-INSTALACAO.md')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(md => {
+      const m = md.match(/```text\r?\n([\s\S]*?)\r?\n```/);
+      if (!m) throw new Error('bloco não encontrado');
+      prompt = m[1];
+      pre.textContent = prompt;
+    })
+    .catch(() => {
+      pre.innerHTML = 'Não consegui carregar o prompt aqui. Copie direto do <a href="' + repoFile + '" target="_blank" rel="noopener">GitHub</a>.';
+    });
+
+  const btn = document.getElementById('copy');
+  btn.addEventListener('click', async () => {
+    if (!prompt) return;
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch {
+      // fallback para navegador sem clipboard API
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+    }
+    btn.textContent = '✓ Copiado!';
+    btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'Copiar prompt'; btn.classList.remove('done'); }, 2000);
+  });
+</script>
+</body>
+</html>
